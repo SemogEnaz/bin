@@ -1,0 +1,107 @@
+#This is a shell script that uses some linux programs to allow the user to add to a journal text file of the 
+#month that will be encrypted after file is closed. Remember to save :)
+#!/bin/bash
+
+# Functions
+    function new_line() {
+        echo -e "\n"
+    }
+
+    function default_message() {
+        git -C /home/zane/Documents/journal add -A; git -C /home/zane/Documents/journal commit -a -m "Update"
+    }
+
+    function custom_message() {
+        git -C /home/zane/Documents/journal add -A; git -C /home/zane/Documents/journal commit -a
+    }
+
+    function nvim_opt() { # NOT WORKING
+
+        ###############
+        # NOT WORKING #
+        ###############
+
+        TEXT_WIDTH='set tw=90'
+        CLOSE_FOLDS="loadview"
+        CURSOR_TO_END="$"
+
+        prefix="-c \""
+        sufix="\" "
+
+        COMMANDS=("$TEXT_WIDTH" $CLOSE_FOLDS $CURSOR_TO_END) 
+
+        declare -a UPDATED_CMD
+
+        for COMMAND in "${COMMANDS[@]}" 
+        do
+            new_cmd=("$prefix""$COMMAND""$sufix")
+            UPDATED_CMD+=${new_cmd[@]}
+        done
+
+        echo $UPDATED_CMD
+    }
+
+    function open_nvim() {
+
+        # This is not working how I'd like, seems like you 
+        # cant mention options using a stirng???
+        OPTIONS=$(nvim_opt)
+
+        nvim $1 -c "set tw=90" -c loadview -c $ -c EnableAutocorrect -c startinsert
+    }
+
+    function latest_gpg_ext() {
+        
+        # Arrange files in order of time, newest first.
+        # Get '.gpg' files
+        # Get name of first file
+        ls /home/zane/Documents/journal -Au | grep "\.gpg" | head -n 1
+    }
+
+    function latest_no_ext() {
+
+        # Arrange files in order of time, newest first.
+        # Ignore files with extensions and dot files
+        # Get name of first file
+        ls /home/zane/Documents/journal -Au -I '*.*' -I '.*'| head -n 1
+    }
+
+# Making a entry 
+
+    # Find latest edited *.gpg file
+    c_file=$(latest_gpg_ext)     # c_file is cipher text file
+
+    # Create extensionless file of same name
+        p_file="/home/zane/Documents/journal/${c_file%.*}"
+
+    # Decrypt and cat contents into extensionless file of the same name
+        gpg -dq /home/zane/Documents/journal/$c_file > $p_file    
+
+    # Add date and some formating to file
+        echo -ne "\n$(date)\n\n\t" >> $p_file
+
+    # Open created extensionless file in nvim and edit
+        open_nvim $p_file
+
+    # Encrypt file and overwrite old file and delete plaintext file
+        gpg -r semogenaz -e $p_file 
+        shred -u $p_file
+
+# Updating Git
+
+    # Getting user choise for git message
+
+        PROMPT="\tDefault commit message?(y/n): " 
+
+        new_line
+
+        echo -ne "$PROMPT"
+        read isMessageDefault
+
+        new_line
+
+    # Controle flow depending on user input
+
+        [[ $isMessageDefault = y ]] && default_message || custom_message 
+
+read
