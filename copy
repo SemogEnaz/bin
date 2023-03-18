@@ -1,0 +1,21 @@
+#!/bin/bash
+
+fileName=$1
+
+copyToClipboard() {
+
+    if [[ $fileName = "" ]]
+    then
+        echo -ne "Empty file name parameter!\nPlease re-enter valid filename: "
+        read $fileName
+        copyToClipboard $fileName
+    else
+        cat $fileName | xsel -ib
+    fi
+}
+
+main() {
+    copyToClipboard $fileName
+}
+
+main
