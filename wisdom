@@ -1,0 +1,5 @@
+#!/bin/bash
+
+message=$(cowsay $(fortune))
+
+echo "$message"
